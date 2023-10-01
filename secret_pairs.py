@@ -40,6 +40,7 @@ import os
 import random
 import sys
 
+from copy import deepcopy
 from datetime import datetime
 from zipfile import ZipFile
 
@@ -137,12 +138,12 @@ def eligible_for(name, picks, fixed, block):
 
 # Given the names and fix/block lists, randomly generate pairs
 def gen_pairs(names, fixed, block):
-    unpaired = names.copy();
-    picks_left = names.copy();
+    unpaired = deepcopy(names);
+    picks_left = deepcopy(names);
     for pick in fixed.values():
         picks_left.remove(pick)
     pairs = dict();
-    ret = gen_pairs_rec(pairs, unpaired, picks_left, fixed.copy(), block.copy(), 0);
+    ret = gen_pairs_rec(pairs, unpaired, picks_left, deepcopy(fixed), deepcopy(block), 0);
     if ret is None:
         sys.exit("Pair generation failed! Too many constraints.");
     return ret;
@@ -182,9 +183,11 @@ def gen_pairs_rec(pairs, unpaired, picks_left, fixed, block, lev):
         pick = random.choice(options);
 
         # Copy all the data to give on to the next pick
-        pairs_copy = pairs.copy();
-        unpaired_copy = unpaired.copy();
-        picks_left_copy = picks_left.copy();
+        pairs_copy = deepcopy(pairs);
+        unpaired_copy = deepcopy(unpaired);
+        picks_left_copy = deepcopy(picks_left);
+        block_copy = deepcopy(block);
+        fixed_copy = deepcopy(fixed);
 
         # Modify that data so it's correct for the next pick
         pairs_copy[who] = pick;
@@ -203,7 +206,7 @@ def gen_pairs_rec(pairs, unpaired, picks_left, fixed, block, lev):
             print(tabs + "\tUnpaired: " + str(unpaired_copy));
             print(tabs + "\tfixes: " + str(fixed));
             print(tabs + "\tblocks: " + str(block));
-        ret = gen_pairs_rec(pairs_copy, unpaired_copy, picks_left_copy, fixed.copy(), block.copy(), lev + 1);
+        ret = gen_pairs_rec(pairs_copy, unpaired_copy, picks_left_copy, fixed_copy, block_copy, lev + 1);
         # If the recursive call succeeded, we found our pairs, pass them up
         if ret is not None:
             return ret;
