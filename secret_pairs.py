@@ -138,12 +138,12 @@ def eligible_for(name, picks, fixed, block):
 
 # Given the names and fix/block lists, randomly generate pairs
 def gen_pairs(names, fixed, block):
-    unpaired = deepcopy(names);
-    picks_left = deepcopy(names);
+    unpaired = names.copy();
+    picks_left = names.copy();
     for pick in fixed.values():
         picks_left.remove(pick)
     pairs = dict();
-    ret = gen_pairs_rec(pairs, unpaired, picks_left, deepcopy(fixed), deepcopy(block), 0);
+    ret = gen_pairs_rec(pairs, unpaired, picks_left, deepcopy(fixed), deepcopy(block));
     if ret is None:
         sys.exit("Pair generation failed! Too many constraints.");
     return ret;
@@ -153,7 +153,7 @@ def gen_pairs(names, fixed, block):
 # On success, call recursively with the pair eliminated from the data
 # If the recursive call fails, pick again, then try another recursive call
 # If all recursive calls fail, fail up to the next level, and so on
-def gen_pairs_rec(pairs, unpaired, picks_left, fixed, block, lev):
+def gen_pairs_rec(pairs, unpaired, picks_left, fixed, block):
     # Base case - all pairs chosen
     if len(unpaired) == 0 and len(picks_left) == 0:
         return pairs;
@@ -172,22 +172,17 @@ def gen_pairs_rec(pairs, unpaired, picks_left, fixed, block, lev):
         options = eligible_for(who, picks_left, fixed, block)
         if len(options) == 0:
             if _debug:
-                tabs = "";
-                for i in range(0,lev):
-                    tabs += "\t";
-                print(tabs + "Found no options for " + who);
-                print(tabs + str(pairs));
+                print("Found no options for " + who);
+                print(str(pairs));
             return None
 
         # Pick a random valid choice
         pick = random.choice(options);
 
         # Copy all the data to give on to the next pick
-        pairs_copy = deepcopy(pairs);
-        unpaired_copy = deepcopy(unpaired);
-        picks_left_copy = deepcopy(picks_left);
-        block_copy = deepcopy(block);
-        fixed_copy = deepcopy(fixed);
+        pairs_copy = pairs.copy();
+        unpaired_copy = unpaired.copy();
+        picks_left_copy = picks_left.copy();
 
         # Modify that data so it's correct for the next pick
         pairs_copy[who] = pick;
@@ -198,25 +193,19 @@ def gen_pairs_rec(pairs, unpaired, picks_left, fixed, block, lev):
 
 
         if _debug:
-            tabs = "";
-            for i in range(0,lev):
-                tabs += "\t";
-            print(tabs + "Paired " + who + " with: " + pick);
-            print(tabs + "\tPicks Left: " + str(picks_left_copy));
-            print(tabs + "\tUnpaired: " + str(unpaired_copy));
-            print(tabs + "\tfixes: " + str(fixed));
-            print(tabs + "\tblocks: " + str(block));
-        ret = gen_pairs_rec(pairs_copy, unpaired_copy, picks_left_copy, fixed_copy, block_copy, lev + 1);
+            print("Paired " + who + " with: " + pick);
+            print("\tPicks Left: " + str(picks_left_copy));
+            print("\tUnpaired: " + str(unpaired_copy));
+            print("\tfixes: " + str(fixed));
+            print("\tblocks: " + str(block));
+        ret = gen_pairs_rec(pairs_copy, unpaired_copy, picks_left_copy, deepcopy(fixed), deepcopy(block));
         # If the recursive call succeeded, we found our pairs, pass them up
         if ret is not None:
             return ret;
 
         # Otherwise, we failed! Block this pick and try a different one
         if _debug:
-            tabs = "";
-            for i in range(0,lev):
-                tabs += "\t";
-            print(tabs + "Due to restrictions below " + who + " cannot pair with " + pick);
+            print("Due to restrictions below " + who + " cannot pair with " + pick);
         if who in block:
             block[who].add(pick);
         else:
