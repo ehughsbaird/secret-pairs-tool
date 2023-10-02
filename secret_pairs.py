@@ -118,7 +118,6 @@ def load_data(data):
 def eligible_for(name, picks, fixed, block):
     # If they've got someone who must go to them
     if name in fixed:
-        #if _debug: print("\t\t" + name + " must have " + fixed[name]);
         return [fixed[name]]
 
     # Final list of eligible picks
@@ -131,7 +130,6 @@ def eligible_for(name, picks, fixed, block):
         if name in block and person in block[name]:
             continue;
         finals.append(person);
-    #if _debug: print("\t\t" + name + " can have " + str(finals));
 
     return finals;
 
@@ -221,7 +219,9 @@ def main():
             help='file containing data to generate pairs');
     parser.add_argument("-d", "--dry-run", help="generate no output files",
             action='store_true');
-    parser.add_argument("-v", "--verbose", help="add extra debug output",
+    parser.add_argument("-v", "--verbose", help="add some extra debug output",
+            action='store_true');
+    parser.add_argument("-vv", "--very-verbose", help="add lots of extra debug output",
             action='store_true');
     parser.add_argument("-c", "--cheat", help="show final results",
             action='store_true');
@@ -234,7 +234,9 @@ def main():
 
     random.seed(args.seed);
 
-    if args.verbose:
+    start_time = datetime.now().timestamp();
+
+    if args.very_verbose:
         global _debug;
         _debug = True;
 
@@ -252,11 +254,12 @@ def main():
         data = json.load(json_file);
         names,fixed,block = load_data(data);
 
-    print("RNG Seed is: " + str(args.seed));
+    if _debug or args.verbose:
+        print("RNG Seed is: " + str(args.seed));
     out = gen_pairs(names, fixed, block);
 
-    if _debug or args.cheat: print(out);
-    print(args);
+    if _debug or args.cheat:
+        print(out);
     if args.dry_run:
         return;
 
@@ -266,7 +269,8 @@ def main():
     # Generate the output files
     for k, v in out.items():
         # Write the given name into this file
-        with open("/tmp/" + str(os.getpid()) + "-assignment.txt", 'w') as writer:
+        filename = "/tmp/" + str(os.getpid()) + "-assignment.txt";
+        with open(filename, 'w') as writer:
             writer.write(v)
             writer.write('\n')
             # Pad for secrecy
@@ -276,8 +280,13 @@ def main():
             writer.write('\n');
         # Zip this anonymous file into a zip file with the name of the person
         # who it was given to, to allow delivery
-        with ZipFile(k.replace(" ", "_") + ".zip", "w") as azip:
-                azip.write("assignment.txt");
+        zipname = k.replace(" ", "_") + ".zip";
+        with ZipFile(zipname, "w") as azip:
+                azip.write(filename);
+        if _debug or args.verbose:
+            print(f"Wrote result for {k} into {zipname}");
+    delta_time = datetime.now().timestamp() - start_time;
+    print(f"Wrote results for {len(out)} participants in {delta_time:0.5f}s");
 
 
 main()

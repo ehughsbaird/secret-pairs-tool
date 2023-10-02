@@ -1,0 +1,37 @@
+{
+  "names": [
+    "Olivia",
+    "Noah",
+    "Emma",
+    "Liam",
+    "Amelia",
+    "Oliver",
+    "Sophia",
+    "Elijah",
+    "Ava",
+    "Mateo",
+    "Charlotte",
+    "Lucas",
+    "Isabella",
+    "Levi",
+    "Mia",
+    "Leo",
+    "Luna",
+    "Ezra",
+    "Evelyn"
+  ],
+  "twoway_force": [
+    [ "Liam", "Emma" ]
+  ],
+  "twoway_block": [
+    [ "Mia", "Mateo" ],
+    [ "Ava", "Elijah" ]
+  ],
+  "force": {
+    "Evelyn": "Ava"
+  },
+  "block": {
+    "Leo": "Luna",
+    "Liam": [ "Lucas", "Levi" ]
+  }
+}
