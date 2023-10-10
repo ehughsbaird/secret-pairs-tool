@@ -42,6 +42,7 @@ import sys
 
 from copy import deepcopy
 from datetime import datetime
+from functools import reduce
 from zipfile import ZipFile
 
 _debug = False
@@ -264,29 +265,30 @@ def main():
         return;
 
     # How long each file must be, to ensure file size doesn't give away names
-    pad_to = 80;
+    # Length of longest name + 5
+    pad_to = len(reduce(lambda l, r: l if len(l) > len(r) else r, out.values())) + 5;
 
     # Generate the output files
-    for k, v in out.items():
+    for name, pair in out.items():
         # Write the given name into this file
-        filename = "/tmp/" + str(os.getpid()) + "-assignment.txt";
+        filename = str(os.getpid()) + "-assignment.txt";
         with open(filename, 'w') as writer:
-            writer.write(v)
+            writer.write(pair)
             writer.write('\n')
             # Pad for secrecy
             writer.write('Secret Padding: ')
-            for i in range(len(v) + 1, pad_to):
+            for i in range(len(pair) + 1, pad_to):
                 writer.write(random.choice(BASE64))
             writer.write('\n');
         # Zip this anonymous file into a zip file with the name of the person
         # who it was given to, to allow delivery
-        zipname = k.replace(" ", "_") + ".zip";
+        zipname = name.replace(" ", "_") + ".zip";
         with ZipFile(zipname, "w") as azip:
                 azip.write(filename);
         if _debug or args.verbose:
-            print(f"Wrote result for {k} into {zipname}");
+            print(f"Wrote result for {name} into {zipname}");
     delta_time = datetime.now().timestamp() - start_time;
     print(f"Wrote results for {len(out)} participants in {delta_time:0.5f}s");
 
-
-main()
+if __name__ == "__main__":
+    main()
