@@ -161,9 +161,12 @@ def gen_pairs_graph_setup(names, fixed, block):
         for edge in E[name]:
             if edge not in Seen:
                 Queue.append(edge)
+    if _debug:
+        print("Graph V:", V),
+        print("E:", E)
     if len(Seen) != len(V):
         print(V, E)
-        sys.exit("Pair generation failed! Too many constraints.")
+        sys.exit("Pair generation failed! Try changing the algorithm.")
 
     return gen_pairs_graph(V, E, random.randrange(0, math.factorial(len(V))))
 
@@ -190,7 +193,7 @@ def gen_pairs_graph(V, E, seed):
     tries = 0;
 
     # not-quite brute force hamiltonian
-    path = [V[0]]
+    path = [V[selections[0]]]
     while len(path) < len(V):
         # It's impossible for there to be a Hamiltonian
         if tries > N:
@@ -198,17 +201,26 @@ def gen_pairs_graph(V, E, seed):
         # Our choice is constrained by who is not yet chosen
         options = list(filter(lambda v: v not in path, V))
         choice = selections[len(path)]
+        if _debug:
+            print(selections)
+            print("\t", path)
         # No edge from current node to the chosen node
         if options[choice] not in E[path[-1]]:
+            if _debug:
+                print("\t", path[-1], "rejected", options[choice])
             # Try the next person
             select_next_choice(len(path))
+            # We don't need to back all the way to the start, but it's more complex to avoid
             path = [V[selections[0]]]
             tries += 1
             continue
         path.append(options[choice])
         # Ensure there's a cycle
         if len(path) == len(V) and path[0] not in E[path[-1]]:
+            if _debug:
+                print("\t", path[-1], "rejected", path[0])
             select_next_choice(len(path)-1)
+            # We don't need to back all the way to the start, but it's more complex to avoid
             path = [V[selections[0]]]
             tries += 1
 
