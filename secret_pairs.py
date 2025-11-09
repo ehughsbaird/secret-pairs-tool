@@ -55,8 +55,8 @@ BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890+/='
 def check_name(name, names, member = None):
     if name not in names:
         if member is not None:
-            sys.exit(name + " in '" + member + "' is not a participant");
-        sys.exit("Invalid participant " + name);
+            sys.exit(name + " in '" + member + "' is not a participant")
+        sys.exit("Invalid participant " + name)
 
 
 # From the JSON file, load names, fixed, and block
@@ -68,49 +68,49 @@ def load_data(data):
     fixed = data["force"]
     # Check validity
     for key,value in fixed.items():
-        check_name(key, names, "force");
-        check_name(value, names, "force");
+        check_name(key, names, "force")
+        check_name(value, names, "force")
 
     # One way enforcement: key must not be paired with value
     block = data["block"]
     # Check validity
     for key,value in block.items():
-        check_name(key, names, "block");
+        check_name(key, names, "block")
         if type(value) is not list:
-            value = [value];
-        block[key] = set(value);
+            value = [value]
+        block[key] = set(value)
         for name in block[key]:
-            check_name(name, names, "block");
+            check_name(name, names, "block")
 
     # Two way enforcement: Entries fixed to each other
     givens = data["twoway_force"]
     # Add a one way enforcement both ways
     for given in givens:
-        left = given[0];
-        right = given[1];
+        left = given[0]
+        right = given[1]
         # And check validity
-        check_name(left, names, "twoway_force");
-        check_name(right, names, "twoway_force");
+        check_name(left, names, "twoway_force")
+        check_name(right, names, "twoway_force")
         # If they've already been fixed, we'd overwrite it ahead
         if left in fixed or right in fixed:
             sys.exit("Conflicting force requirements with " + left + " and " + right)
         # Finally, add the enforcement
-        fixed[left] = right;
-        fixed[right] = left;
+        fixed[left] = right
+        fixed[right] = left
 
     # Two way enforcement: Entries must not be paired with eachother
     forbids = data["twoway_block"]
     for forbid in forbids:
-        left = forbid[0];
-        right = forbid[1];
+        left = forbid[0]
+        right = forbid[1]
         # Also, check validity!
-        check_name(left, names, "twoway_block");
-        check_name(right, names, "twoway_block");
+        check_name(left, names, "twoway_block")
+        check_name(right, names, "twoway_block")
         # Then set up blocks
-        if left in block: block[left].add( right );
-        else: block[left] = set([right]);
-        if right in block: block[right].add( left );
-        else: block[right] = set([left]);
+        if left in block: block[left].add( right )
+        else: block[left] = set([right])
+        if right in block: block[right].add( left )
+        else: block[right] = set([left])
     # TODO: Add more validation
     return (names,fixed,block)
 
@@ -123,21 +123,21 @@ def eligible_for(name, picks, fixed, block):
         return [fixed[name]]
 
     # Final list of eligible picks
-    finals = [];
+    finals = []
     for person in picks:
         # We can't pick ourselves
         if person == name:
-            continue;
+            continue
         # And we can't pick anyone who we blocked
         if name in block and person in block[name]:
-            continue;
-        finals.append(person);
+            continue
+        finals.append(person)
 
-    return finals;
+    return finals
 
 def gen_pairs_graph_setup(names, fixed, block):
-    V = names;
-    E = {};
+    V = names
+    E = {}
     # generate the maximal edges
     for key in V:
         E[key] = set()
@@ -220,15 +220,15 @@ def gen_pairs(names, fixed, block, algorithm):
         sys.exit("Invalid algorithm '" + algorithm + "'")
 
 def gen_pairs_rec_setup(names, fixed, block):
-    unpaired = names.copy();
-    picks_left = names.copy();
+    unpaired = names.copy()
+    picks_left = names.copy()
     for pick in fixed.values():
         picks_left.remove(pick)
-    pairs = dict();
-    ret = gen_pairs_rec(pairs, unpaired, picks_left, deepcopy(fixed), deepcopy(block));
+    pairs = dict()
+    ret = gen_pairs_rec(pairs, unpaired, picks_left, deepcopy(fixed), deepcopy(block))
     if ret is None:
-        sys.exit("Pair generation failed! Too many constraints.");
-    return ret;
+        sys.exit("Pair generation failed! Too many constraints.")
+    return ret
 
 # Try to pick a pair, functional style
 # On success, call recursively with the pair eliminated from the data
@@ -237,15 +237,15 @@ def gen_pairs_rec_setup(names, fixed, block):
 def gen_pairs_rec(pairs, unpaired, picks_left, fixed, block):
     # Base case - all pairs chosen
     if len(unpaired) == 0 and len(picks_left) == 0:
-        return pairs;
+        return pairs
 
     # Who we'll try to match up
-    who = random.choice(unpaired);
+    who = random.choice(unpaired)
     # Give priority to those with fixed pairs
     for priority in fixed.keys():
         if priority in unpaired:
-            who = priority;
-            break;
+            who = priority
+            break
 
     while True:
         # Valid picks. If we've exhausted all valid picks, fail and see if
@@ -253,77 +253,77 @@ def gen_pairs_rec(pairs, unpaired, picks_left, fixed, block):
         options = eligible_for(who, picks_left, fixed, block)
         if len(options) == 0:
             if _debug:
-                print("Found no options for " + who);
-                print(str(pairs));
+                print("Found no options for " + who)
+                print(str(pairs))
             return None
 
         # Pick a random valid choice
-        pick = random.choice(options);
+        pick = random.choice(options)
 
         # Copy all the data to give on to the next pick
-        pairs_copy = pairs.copy();
-        unpaired_copy = unpaired.copy();
-        picks_left_copy = picks_left.copy();
+        pairs_copy = pairs.copy()
+        unpaired_copy = unpaired.copy()
+        picks_left_copy = picks_left.copy()
 
         # Modify that data so it's correct for the next pick
-        pairs_copy[who] = pick;
+        pairs_copy[who] = pick
         if who in unpaired:
-            unpaired_copy.remove(who);
+            unpaired_copy.remove(who)
         if pick in picks_left:
-            picks_left_copy.remove(pick);
+            picks_left_copy.remove(pick)
 
 
         if _debug:
-            print("Paired " + who + " with: " + pick);
-            print("\tPicks Left: " + str(picks_left_copy));
-            print("\tUnpaired: " + str(unpaired_copy));
-            print("\tfixes: " + str(fixed));
-            print("\tblocks: " + str(block));
-        ret = gen_pairs_rec(pairs_copy, unpaired_copy, picks_left_copy, deepcopy(fixed), deepcopy(block));
+            print("Paired " + who + " with: " + pick)
+            print("\tPicks Left: " + str(picks_left_copy))
+            print("\tUnpaired: " + str(unpaired_copy))
+            print("\tfixes: " + str(fixed))
+            print("\tblocks: " + str(block))
+        ret = gen_pairs_rec(pairs_copy, unpaired_copy, picks_left_copy, deepcopy(fixed), deepcopy(block))
         # If the recursive call succeeded, we found our pairs, pass them up
         if ret is not None:
-            return ret;
+            return ret
 
         # Otherwise, we failed! Block this pick and try a different one
         if _debug:
-            print("Due to restrictions below " + who + " cannot pair with " + pick);
+            print("Due to restrictions below " + who + " cannot pair with " + pick)
         if who in block:
-            block[who].add(pick);
+            block[who].add(pick)
         else:
-            block[who] = set([pick]);
+            block[who] = set([pick])
 
 
 def main():
     parser = argparse.ArgumentParser(description=
             "Anonymously and randomly generate pairs of people, with support "
             "for mandatory pairs and exclusion. Output generated as zip files "
-            "named after each participant with their selected pair inside.");
+            "named after each participant with their selected pair inside.")
     parser.add_argument("param_file", metavar="FILE", type=str,
-            help='file containing data to generate pairs');
+            help='file containing data to generate pairs')
     parser.add_argument("-d", "--dry-run", help="generate no output files",
-            action='store_true');
+            action='store_true')
     parser.add_argument("-v", "--verbose", help="add some extra debug output",
-            action='store_true');
+            action='store_true')
     parser.add_argument("-vv", "--very-verbose", help="add lots of extra debug output",
-            action='store_true');
+            action='store_true')
     parser.add_argument("-c", "--cheat", help="show final results",
-            action='store_true');
+            action='store_true')
     parser.add_argument("-s", "--seed", metavar="SEED", type=int,
             help="Seed RNG with SEED",
             default=int(datetime.now().timestamp() * 1000000000))
     parser.add_argument("-a", "--algorithm", metavar="ALGO", type=str, default="hamiltonian",
                         help='Algorithm to choose with. Options are "recursive" or "hamiltonian"')
     #parser.add_argument("-o", "--out", metavar="OUT", type=str,
-    #        help='output directory for zip files', default="");
-    args = parser.parse_args();
+    #        help='output directory for zip files', default="")
+    args = parser.parse_args()
 
-    random.seed(args.seed);
+    random.seed(args.seed)
 
-    start_time = datetime.now().timestamp();
+    start_time = datetime.now().timestamp()
 
     if args.very_verbose:
-        global _debug;
-        _debug = True;
+        global _debug
+        _debug = True
 
     # Who's gonna be involved in selection
     # List of string. Everyone who is participating in pairing process
@@ -336,24 +336,24 @@ def main():
     # In the final output, key cannot be matched with any element of value
     block = {}
     with open(args.param_file, "r", encoding="utf-8") as json_file:
-        data = json.load(json_file);
-        names,fixed,block = load_data(data);
+        data = json.load(json_file)
+        names,fixed,block = load_data(data)
 
     if _debug or args.verbose:
-        print("RNG Seed is: " + str(args.seed));
-    out = gen_pairs(names, fixed, block, args.algorithm);
+        print("RNG Seed is: " + str(args.seed))
+    out = gen_pairs(names, fixed, block, args.algorithm)
 
     if _debug or args.cheat:
-        print(out);
+        print(out)
     if args.dry_run:
-        return;
+        return
 
     # How long each file must be, to ensure file size doesn't give away names
     # Length of longest name + 5
-    pad_to = len(reduce(lambda l, r: l if len(l) > len(r) else r, out.values())) + 5;
+    pad_to = len(reduce(lambda l, r: l if len(l) > len(r) else r, out.values())) + 5
 
     # Write the given name into this file
-    filename = str(os.getpid()) + "-assignment.txt";
+    filename = "Your-assignment.txt"
     # Generate the output files
     for name, pair in out.items():
         with open(filename, 'w') as writer:
@@ -363,17 +363,17 @@ def main():
             writer.write('Secret Padding: ')
             for i in range(len(pair) + 1, pad_to):
                 writer.write(random.choice(BASE64))
-            writer.write('\n');
+            writer.write('\n')
         # Zip this anonymous file into a zip file with the name of the person
         # who it was given to, to allow delivery
-        zipname = name.replace(" ", "_") + ".zip";
+        zipname = name.replace(" ", "_") + ".zip"
         with ZipFile(zipname, "w") as azip:
-                azip.write(filename);
+                azip.write(filename)
         if _debug or args.verbose:
-            print(f"Wrote result for {name} into {zipname}");
+            print(f"Wrote result for {name} into {zipname}")
     os.remove(filename)
-    delta_time = datetime.now().timestamp() - start_time;
-    print(f"Wrote results for {len(out)} participants in {delta_time:0.5f}s");
+    delta_time = datetime.now().timestamp() - start_time
+    print(f"Wrote results for {len(out)} participants in {delta_time:0.5f}s")
 
 if __name__ == "__main__":
     main()
