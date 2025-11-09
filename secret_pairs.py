@@ -36,6 +36,7 @@ It should be in the following format
 
 import argparse
 import json
+import math
 import os
 import random
 import sys
@@ -134,9 +135,91 @@ def eligible_for(name, picks, fixed, block):
 
     return finals;
 
+def gen_pairs_graph_setup(names, fixed, block):
+    V = names;
+    E = {};
+    # generate the maximal edges
+    for key in V:
+        E[key] = set()
+        for edge in V:
+            if edge == key:
+                continue
+            E[key].add(edge)
+
+    # Then trim by fixed/blocks
+    for key, blocked in block.items():
+        E[key] = list(filter(lambda edge: edge not in blocked, E[key]))
+    for key, fixed in fixed.items():
+        E[key] = list(filter(lambda edge: edge != fixed, E[key]))
+
+    # And ensure it's not over-constrained
+    Queue = [V[0]]
+    Seen = set()
+    while len(Queue) > 0:
+        name = Queue.pop()
+        Seen.add(name)
+        for edge in E[name]:
+            if edge not in Seen:
+                Queue.append(edge)
+    if len(Seen) != len(V):
+        print(V, E)
+        sys.exit("Pair generation failed! Too many constraints.")
+
+    return gen_pairs_graph(V, E, random.randrange(0, math.factorial(len(V))))
+
+
+def gen_pairs_graph(V, E, seed):
+    # There are len(V)! possible paths (we're looking for a hamiltonian cycle)
+    # Number of choices at each step [ len(V), len(V) - 1, ..., 1, 0 ]
+    maxes = [(math.factorial(len(V) - x)/math.factorial(len(V)-x-1))-1 for x in range(len(V))]
+    # The actual selection made
+    selections = [int((seed % math.factorial(len(V)-x))/math.factorial(len(V)-x-1)) for x in range(len(V))]
+    # Select the next choice for the given choice to be made. 0 is the first selection, etc
+    def select_next_choice(choice):
+        val = selections[choice]
+        # be lazy and recurse
+        if val + 1 > maxes[choice]:
+            selections[choice] = 0
+            if choice > 0:
+                select_next_choice(choice - 1)
+        else:
+            selections[choice] = val + 1
+
+    # brute force hamiltonian
+    path = [V[0]]
+    while len(path) < len(V):
+        # Our choice is constrained by who is not yet chosen
+        options = list(filter(lambda v: v not in path, V))
+        choice = selections[len(path)]
+        # No edge from current node to the chosen node
+        if options[choice] not in E[path[-1]]:
+            # Try the next person
+            select_next_choice(len(path))
+            path = [V[selections[0]]]
+            continue
+        path.append(options[choice])
+        # Ensure there's a cycle
+        if len(path) == len(V) and path[0] not in E[path[-1]]:
+            select_next_choice(len(path)-1)
+            path = [V[selections[0]]]
+
+    ret = {}
+    for i in range(len(path) - 1):
+        ret[path[i]] = path[i+1]
+    ret[path[-1]] = path[0]
+    return ret
+
 
 # Given the names and fix/block lists, randomly generate pairs
-def gen_pairs(names, fixed, block):
+def gen_pairs(names, fixed, block, algorithm):
+    if algorithm.lower() == 'hamiltonian':
+        return gen_pairs_graph_setup(names, fixed, block)
+    elif algorithm.lower() == 'recursive':
+        return gen_pairs_rec_setup(names, fixed, block)
+    else:
+        sys.exit("Invalid algorithm '" + algorithm + "'")
+
+def gen_pairs_rec_setup(names, fixed, block):
     unpaired = names.copy();
     picks_left = names.copy();
     for pick in fixed.values():
@@ -146,7 +229,6 @@ def gen_pairs(names, fixed, block):
     if ret is None:
         sys.exit("Pair generation failed! Too many constraints.");
     return ret;
-
 
 # Try to pick a pair, functional style
 # On success, call recursively with the pair eliminated from the data
@@ -229,6 +311,8 @@ def main():
     parser.add_argument("-s", "--seed", metavar="SEED", type=int,
             help="Seed RNG with SEED",
             default=int(datetime.now().timestamp() * 1000000000))
+    parser.add_argument("-a", "--algorithm", metavar="ALGO", type=str, default="hamiltonian",
+                        help='Algorithm to choose with. Options are "recursive" or "hamiltonian"')
     #parser.add_argument("-o", "--out", metavar="OUT", type=str,
     #        help='output directory for zip files', default="");
     args = parser.parse_args();
@@ -257,7 +341,7 @@ def main():
 
     if _debug or args.verbose:
         print("RNG Seed is: " + str(args.seed));
-    out = gen_pairs(names, fixed, block);
+    out = gen_pairs(names, fixed, block, args.algorithm);
 
     if _debug or args.cheat:
         print(out);
@@ -268,10 +352,10 @@ def main():
     # Length of longest name + 5
     pad_to = len(reduce(lambda l, r: l if len(l) > len(r) else r, out.values())) + 5;
 
+    # Write the given name into this file
+    filename = str(os.getpid()) + "-assignment.txt";
     # Generate the output files
     for name, pair in out.items():
-        # Write the given name into this file
-        filename = str(os.getpid()) + "-assignment.txt";
         with open(filename, 'w') as writer:
             writer.write(pair)
             writer.write('\n')
@@ -287,6 +371,7 @@ def main():
                 azip.write(filename);
         if _debug or args.verbose:
             print(f"Wrote result for {name} into {zipname}");
+    os.remove(filename)
     delta_time = datetime.now().timestamp() - start_time;
     print(f"Wrote results for {len(out)} participants in {delta_time:0.5f}s");
 
