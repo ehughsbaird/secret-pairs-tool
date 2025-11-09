@@ -150,7 +150,7 @@ def gen_pairs_graph_setup(names, fixed, block):
     for key, blocked in block.items():
         E[key] = list(filter(lambda edge: edge not in blocked, E[key]))
     for key, fixed in fixed.items():
-        E[key] = list(filter(lambda edge: edge != fixed, E[key]))
+        E[key] = list(filter(lambda edge: edge == fixed, E[key]))
 
     # And ensure it's not over-constrained
     Queue = [V[0]]
@@ -170,6 +170,7 @@ def gen_pairs_graph_setup(names, fixed, block):
 
 def gen_pairs_graph(V, E, seed):
     # There are len(V)! possible paths (we're looking for a hamiltonian cycle)
+    N = math.factorial(len(V))
     # Number of choices at each step [ len(V), len(V) - 1, ..., 1, 0 ]
     maxes = [(math.factorial(len(V) - x)/math.factorial(len(V)-x-1))-1 for x in range(len(V))]
     # The actual selection made
@@ -184,10 +185,16 @@ def gen_pairs_graph(V, E, seed):
                 select_next_choice(choice - 1)
         else:
             selections[choice] = val + 1
+    # Proving a Hamiltonian exists is NP-complete
+    # So keep track of the tries and give up if we can't find a path
+    tries = 0;
 
-    # brute force hamiltonian
+    # not-quite brute force hamiltonian
     path = [V[0]]
     while len(path) < len(V):
+        # It's impossible for there to be a Hamiltonian
+        if tries > N:
+            sys.exit("Unable to find a cycle. Try changing the algorithm.")
         # Our choice is constrained by who is not yet chosen
         options = list(filter(lambda v: v not in path, V))
         choice = selections[len(path)]
@@ -196,12 +203,14 @@ def gen_pairs_graph(V, E, seed):
             # Try the next person
             select_next_choice(len(path))
             path = [V[selections[0]]]
+            tries += 1
             continue
         path.append(options[choice])
         # Ensure there's a cycle
         if len(path) == len(V) and path[0] not in E[path[-1]]:
             select_next_choice(len(path)-1)
             path = [V[selections[0]]]
+            tries += 1
 
     ret = {}
     for i in range(len(path) - 1):
