@@ -174,10 +174,10 @@ def gen_pairs_graph_setup(names, fixed, block):
 def gen_pairs_graph(V, E, seed):
     # There are len(V)! possible paths (we're looking for a hamiltonian cycle)
     N = math.factorial(len(V))
-    # Number of choices at each step [ len(V), len(V) - 1, ..., 1, 0 ]
-    maxes = [(math.factorial(len(V) - x)/math.factorial(len(V)-x-1))-1 for x in range(len(V))]
+    # Number of choices at each step [ len(V) - 1, len(V) - 2, ..., 1, 0 ]
+    maxes = [len(V) - x - 1 for x in range(len(V))]
     # The actual selection made
-    selections = [int((seed % math.factorial(len(V)-x))/math.factorial(len(V)-x-1)) for x in range(len(V))]
+    selections = [(seed % (len(V)-x)) for x in range(len(V))]
     # Select the next choice for the given choice to be made. 0 is the first selection, etc
     def select_next_choice(choice):
         val = selections[choice]
