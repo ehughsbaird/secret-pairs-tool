@@ -179,17 +179,28 @@ def gen_pairs_graph(V, E, seed):
     selections = [(seed % (len(V)-x)) for x in range(len(V))]
     # Select the next choice for the given choice to be made. 0 is the first selection, etc
     def select_next_choice(choice):
+        ret = 0
         val = selections[choice]
         # be lazy and recurse
         if val + 1 > maxes[choice]:
             selections[choice] = 0
             if choice > 0:
-                select_next_choice(choice - 1)
+                ret = 1 + select_next_choice(choice - 1)
         else:
             selections[choice] = val + 1
+        return ret
     # Proving a Hamiltonian exists is NP-complete
     # So keep track of the tries and give up if we can't find a path
     tries = 0
+
+    def reject(path, tries, offset):
+        # The number of choices that have been eliminated by increment
+        rank = len(V) - (len(path)-1) + select_next_choice(len(path)-offset)
+        length = len(V) - rank
+        path = []
+        for i in range(length):
+            path.append(list(filter(lambda v: v not in path, V))[selections[i]])
+        return path, tries + math.factorial(rank)
 
     # not-quite brute force hamiltonian
     path = [V[selections[0]]]
@@ -207,21 +218,17 @@ def gen_pairs_graph(V, E, seed):
         if options[choice] not in E[path[-1]]:
             if _debug:
                 print("\t", path[-1], "rejected", options[choice])
+                print("\t", tries, "/", N, tries/N)
             # Try the next person
-            select_next_choice(len(path))
-            # We don't need to back all the way to the start, but it's more complex to avoid
-            path = [V[selections[0]]]
-            tries += 1
+            path, tries = reject(path, tries, 0)
             continue
         path.append(options[choice])
         # Ensure there's a cycle
         if len(path) == len(V) and path[0] not in E[path[-1]]:
             if _debug:
                 print("\t", path[-1], "rejected", path[0])
-            select_next_choice(len(path)-1)
-            # We don't need to back all the way to the start, but it's more complex to avoid
-            path = [V[selections[0]]]
-            tries += 1
+                print("\t", tries, "/", N, tries/N)
+            path, tries = reject(path, tries, 1)
 
     ret = {}
     for i in range(len(path) - 1):
