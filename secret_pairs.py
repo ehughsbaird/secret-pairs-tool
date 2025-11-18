@@ -165,8 +165,7 @@ def gen_pairs_graph_setup(names, fixed, block):
         print("Graph V:", V),
         print("E:", E)
     if len(Seen) != len(V):
-        print(V, E)
-        sys.exit("Pair generation failed! Try changing the algorithm.")
+        return None
 
     return gen_pairs_graph(V, E, random.randrange(0, math.factorial(len(V))))
 
@@ -190,14 +189,14 @@ def gen_pairs_graph(V, E, seed):
             selections[choice] = val + 1
     # Proving a Hamiltonian exists is NP-complete
     # So keep track of the tries and give up if we can't find a path
-    tries = 0;
+    tries = 0
 
     # not-quite brute force hamiltonian
     path = [V[selections[0]]]
     while len(path) < len(V):
         # It's impossible for there to be a Hamiltonian
         if tries > N:
-            sys.exit("Unable to find a cycle. Try changing the algorithm.")
+            return None
         # Our choice is constrained by who is not yet chosen
         options = list(filter(lambda v: v not in path, V))
         choice = selections[len(path)]
@@ -233,14 +232,22 @@ def gen_pairs_graph(V, E, seed):
 
 # Given the names and fix/block lists, randomly generate pairs
 def gen_pairs(names, fixed, block, algorithm):
-    if algorithm.lower() == 'hamiltonian':
-        return gen_pairs_graph_setup(names, fixed, block)
-    elif algorithm.lower() == 'recursive':
-        return gen_pairs_rec_setup(names, fixed, block)
+    if algorithm.lower() == 'default':
+        ret = gen_pairs_graph_setup(names, fixed, block)
+        if ret is None:
+            ret = gen_pairs_random_setup(names, fixed, block)
+        return ret
+    elif algorithm.lower() == 'hamiltonian':
+        ret = gen_pairs_graph_setup(names, fixed, block)
+        if ret is None:
+            sys.exit("Unable to find a cycle. Try changing the algorithm.")
+        return ret
+    elif algorithm.lower() == 'random':
+        return gen_pairs_random_setup(names, fixed, block)
     else:
         sys.exit("Invalid algorithm '" + algorithm + "'")
 
-def gen_pairs_rec_setup(names, fixed, block):
+def gen_pairs_random_setup(names, fixed, block):
     unpaired = names.copy()
     picks_left = names.copy()
     for pick in fixed.values():
@@ -332,8 +339,8 @@ def main():
     parser.add_argument("-s", "--seed", metavar="SEED", type=int,
             help="Seed RNG with SEED",
             default=int(datetime.now().timestamp() * 1000000000))
-    parser.add_argument("-a", "--algorithm", metavar="ALGO", type=str, default="hamiltonian",
-                        help='Algorithm to choose with. Options are "recursive" or "hamiltonian"')
+    parser.add_argument("-a", "--algorithm", metavar="ALGO", type=str, default="default",
+                        help='Algorithm to choose with. Options are "random", "hamiltonian", or "default"')
     #parser.add_argument("-o", "--out", metavar="OUT", type=str,
     #        help='output directory for zip files', default="")
     args = parser.parse_args()
