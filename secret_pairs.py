@@ -150,7 +150,13 @@ def gen_pairs_graph_setup(names, fixed, block):
     for key, blocked in block.items():
         E[key] = list(filter(lambda edge: edge not in blocked, E[key]))
     for key, fixed in fixed.items():
+        # key must have fixed
         E[key] = list(filter(lambda edge: edge == fixed, E[key]))
+        # nobody else can have fixed
+        for other in E:
+            if other == key:
+                continue
+            E[other] = list(filter(lambda edge: edge != fixed, E[other]))
 
     # And ensure it's not over-constrained
     Queue = [V[0]]
@@ -162,9 +168,14 @@ def gen_pairs_graph_setup(names, fixed, block):
             if edge not in Seen:
                 Queue.append(edge)
     if _debug:
+        print("Seen:", Seen)
         print("Graph V:", V),
-        print("E:", E)
+        print("Graph E:")
+        for item in E.items():
+            print("\t", item)
     if len(Seen) != len(V):
+        if _debug:
+            print("Missing", list(filter(lambda v: v not in Seen, V)), "cannot use hamiltonian")
         return None
 
     return gen_pairs_graph(V, E, random.randrange(0, math.factorial(len(V))))
